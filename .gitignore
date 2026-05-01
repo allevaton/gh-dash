@@ -13,3 +13,5 @@ testdata/gh-schema.graphql
 .task/
 /sponsors.json
 resterm.env.json
+
+scripts/sync-fork.sh
