@@ -91,8 +91,8 @@ To navigate our codebase with confidence, familiarize yourself with:
 ### Debugging
 
 - Write to the log by using Charm's `log` package
-- Tail the log by running `task logs`
-- Run `dash` in debug mode with `task debug` in another terminal window / pane
+- Tail the log by running `make logs`
+- Run `dash` in debug mode with `make debug` in another terminal window / pane
 
 ```go
 import "charm.land/log/v2"
@@ -104,20 +104,20 @@ log.Debug("some message", "someVariable", someVariable)
 
 ### Linting
 
-CI runs this check, but for PRs from forks it may require maintainer approval before it starts. Running `task lint` locally saves a round-trip.
+CI runs this check, but for PRs from forks it may require maintainer approval before it starts. Running `make lint` locally saves a round-trip.
 
 ```sh
-task lint
+make lint
 ```
 
 To auto-fix formatting issues (line length, imports, etc.):
 
 ```sh
-task lint:fix
+make lint-fix
 ```
 
 ### Running the Docs Locally
 
-- Run the docs site by running `task docs`
+- Run the docs site by running `make docs`
 
 * Go to `localhost:4321` to view them

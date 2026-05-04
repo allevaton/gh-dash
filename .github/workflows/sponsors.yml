@@ -20,11 +20,7 @@ jobs:
         with:
           go-version: "1.26"
           cache: true
-      - name: Install Task
-        uses: go-task/setup-task@v2
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: task docs-sponsors
+      - run: make docs-sponsors
         env:
           GITHUB_TOKEN: ${{ secrets.SPONSORS_TOKEN }}
       - uses: stefanzweifel/git-auto-commit-action@04702edda442b2e678b25b537cec683a1493fcb9 # v7.1.0

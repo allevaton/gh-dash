@@ -8,31 +8,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Dev environment
 
-- Tooling is managed by [Devbox](https://github.com/jetify-com/devbox). Run everything from inside `devbox shell` so versions of `go`, `golangci-lint` (2.10.1), `gofumpt`, `go-task`, `nerdfix`, etc. match CI.
-- `prism` (test runner) and `gotip` (single-test helper) are installed by the devbox `init_hook` into `.devbox/go/bin`. If `task test` / `task test:one` aren't found, re-enter the devbox shell.
+- Tooling is managed by [Devbox](https://github.com/jetify-com/devbox). Run everything from inside `devbox shell` so versions of `go`, `golangci-lint` (2.10.1), `gofumpt`, `nerdfix`, etc. match CI.
+- `prism` (test runner) and `gotip` (single-test helper) are installed by the devbox `init_hook` into `.devbox/go/bin`. If `make test` / `make test-one` aren't found, re-enter the devbox shell.
 
 ## Common commands
 
-All driven by `Taskfile.yaml` (`task <name>`):
+All driven by `Makefile` (`make <name>`):
 
-| Task | What it does |
+| Target | What it does |
 | --- | --- |
-| `task` (default) / `go run .` | Run the TUI |
-| `task build` | `go build .` |
-| `task install` | Build and install as `gh dash` extension (`gh ext install .`) |
-| `task debug` | Run with `--debug`, writes to `./debug.log`. Use `task logs` in another pane to tail |
-| `task debug:warn` | Same as debug but `LOG_LEVEL=warn` |
-| `task dlv` | Headless `dlv` on `127.0.0.1:43000` |
-| `task lint` | `golangci-lint run` (canonical CI lint) |
-| `task lint:fix` | Lint with `--fix` (also runs `gofumpt`/`goimports`/`golines` formatters) |
-| `task fmt` | `gofumpt -w` over tracked Go files |
-| `task test` | `prism test ./...` |
-| `task test:one` | `gotip` — interactive single-test picker |
-| `task test:rerun` | `gotip --rerun` |
-| `task check-nerd-font` / `task fix-nerd-font` | Validate/repair Nerd Font glyphs in source |
-| `task docs` | Run the Astro docs site at `localhost:4321` (under `docs/`, pnpm) |
+| `make` (default = `run`) / `go run .` | Run the TUI |
+| `make build` | `go build .` |
+| `make install` | Build and install as `gh dash` extension (`gh ext install .`) |
+| `make debug` | Run with `--debug`, writes to `./debug.log`. Use `make logs` in another pane to tail |
+| `make debug-warn` | Same as debug but `LOG_LEVEL=warn` |
+| `make debug-info` | Same as debug but `LOG_LEVEL=info` |
+| `make profile` | Debug run with `DASH_PROFILE=true`; pprof server on `:6060` |
+| `make profile-cpu` / `profile-heap` / `profile-allocs` | Open the matching pprof view on `:6061` |
+| `make dlv` | Headless `dlv` on `127.0.0.1:43000` |
+| `make lint` | `golangci-lint run` (matches the CI lint config) |
+| `make lint-fix` | Lint with `--fix` (also runs `gofumpt`/`goimports`/`golines` formatters) |
+| `make fmt` | `gofumpt -w` over tracked Go files |
+| `make test` | `prism test ./...` |
+| `make test-one` | `gotip` — interactive single-test picker |
+| `make test-rerun` | `gotip --rerun` |
+| `make check-nerd-font` / `make fix-nerd-font` | Validate/repair Nerd Font glyphs in source |
+| `make docs` | Run the Astro docs site at `localhost:4321` (under `docs/`, pnpm) |
 
-Stdlib-style single test: `go test ./internal/tui/components/prssection -run TestX -v`. CI runs `task lint`; running it locally before pushing avoids the maintainer-approval round-trip on fork PRs.
+Pass extra flags via `ARGS=`, e.g. `make run ARGS="--debug"` or `make test ARGS="-run TestX -v"`.
+
+Stdlib-style single test: `go test ./internal/tui/components/prssection -run TestX -v`. CI runs `golangci-lint` directly via `golangci-lint-action`; running `make lint` locally first avoids the maintainer-approval round-trip on fork PRs.
 
 ## Logging while debugging
 
@@ -41,7 +46,7 @@ import log "charm.land/log/v2"
 log.Debug("some message", "someVariable", someVariable)
 ```
 
-`task debug` initializes `debug.log`; `task logs` tails it. `LOG_LEVEL` env var (`debug|info|warn|error`) controls level when `--debug` is set.
+`make debug` initializes `debug.log`; `make logs` tails it. `LOG_LEVEL` env var (`debug|info|warn|error`) controls level when `--debug` is set.
 
 ## Architecture
 
@@ -83,8 +88,8 @@ A section type generally needs: a `data/` API function, a `components/<x>row` re
 ## Style and lint expectations
 
 - `golangci-lint` config in `.golangci.yml` enables `bodyclose`, `staticcheck`, `misspell`, `nolintlint`, `tparallel`, `whitespace`, etc., and disables `errcheck`/`ineffassign`/`unused`. Formatters enforced: `gofumpt`, `goimports`, `golines` (with `chain-split-dots`).
-- `task lint:fix` is the fast path for line-length / import-order failures.
-- `gotip` and `prism` are the test runners of choice — see Taskfile. Stdlib `go test` works fine for ad-hoc runs but CI uses the task targets.
+- `make lint-fix` is the fast path for line-length / import-order failures.
+- `gotip` and `prism` are the test runners of choice — see the Makefile. Stdlib `go test` works fine for ad-hoc runs; CI invokes `go test ./...` directly.
 
 ## AI / contribution policy
 
@@ -94,5 +99,5 @@ A section type generally needs: a `data/` API function, a `components/<x>row` re
 
 - Imports use the `charm.land/...` v2 paths for bubbletea, bubbles, lipgloss, log, and glamour — don't auto-suggest the older `github.com/charmbracelet/...` paths for those packages (they exist for some sub-packages like `fang`, `x/ansi`, etc., but not for the core TUI libs here).
 - The module is `v4` (`github.com/dlvhdr/gh-dash/v4`) — internal imports must include `/v4`.
-- `task install` removes any installed `gh dash` extension before reinstalling from the local build (`gh ext remove dash` then `gh ext install .`). Don't run this on a coworker's box without warning.
+- `make install` removes any installed `gh dash` extension before reinstalling from the local build (`gh ext remove dash` then `gh ext install .`). Don't run this on a coworker's box without warning.
 - `.gh-dash.yml` at repo root is the project's *own* dashboard config (used when devs run `gh dash` here), not a fixture. Don't treat it as test data.
