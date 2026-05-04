@@ -88,6 +88,8 @@ func (m *Model) GetCurrItem() int {
 }
 
 func (m *Model) NextItem() int {
+	m.snapToCursor()
+
 	atBottomOfViewport := m.currId >= m.bottomBoundId
 	if atBottomOfViewport {
 		m.topBoundId += 1
@@ -102,6 +104,8 @@ func (m *Model) NextItem() int {
 }
 
 func (m *Model) PrevItem() int {
+	m.snapToCursor()
+
 	if m.currId > 0 && m.currId <= m.topBoundId {
 		m.topBoundId -= 1
 		m.bottomBoundId -= 1
@@ -110,6 +114,63 @@ func (m *Model) PrevItem() int {
 
 	m.currId = utils.Max(m.currId-1, 0)
 	return m.currId
+}
+
+func (m *Model) SetCurrItem(id int) {
+	if m.NumCurrentItems == 0 {
+		return
+	}
+	m.currId = utils.Clamp(0, id, m.NumCurrentItems-1)
+	m.snapToCursor()
+}
+
+// snapToCursor scrolls the viewport so that the currently selected item is
+// visible. If it's already visible, this is a no-op.
+func (m *Model) snapToCursor() {
+	if m.ListItemHeight == 0 {
+		return
+	}
+	perPage := m.getNumPrsPerPage()
+	if perPage == 0 {
+		return
+	}
+	// Bounds, not viewport.YOffset(), are the source of truth here: the wheel
+	// handlers sync bounds from the viewport, but a viewport with no content
+	// clamps YOffset to 0 and would report every item as visible.
+	if m.currId < m.topBoundId {
+		m.topBoundId = m.currId
+	} else if m.currId > m.bottomBoundId {
+		m.topBoundId = m.currId - perPage + 1
+	} else {
+		return
+	}
+	m.bottomBoundId = utils.Min(m.NumCurrentItems-1, m.topBoundId+perPage-1)
+	m.viewport.SetYOffset(m.topBoundId * m.ListItemHeight)
+}
+
+func (m *Model) ScrollUp(items int) {
+	if m.ListItemHeight == 0 || items <= 0 {
+		return
+	}
+	m.viewport.ScrollUp(items * m.ListItemHeight)
+	m.syncBoundsFromViewport()
+}
+
+func (m *Model) ScrollDown(items int) {
+	if m.ListItemHeight == 0 || items <= 0 {
+		return
+	}
+	m.viewport.ScrollDown(items * m.ListItemHeight)
+	m.syncBoundsFromViewport()
+}
+
+func (m *Model) syncBoundsFromViewport() {
+	if m.ListItemHeight == 0 {
+		return
+	}
+	m.topBoundId = m.viewport.YOffset() / m.ListItemHeight
+	perPage := m.getNumPrsPerPage()
+	m.bottomBoundId = utils.Min(m.NumCurrentItems-1, m.topBoundId+perPage-1)
 }
 
 func (m *Model) FirstItem() int {

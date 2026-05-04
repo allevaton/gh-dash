@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"text/template"
@@ -35,6 +36,12 @@ import (
 	"github.com/dlvhdr/gh-dash/v4/internal/tui/keys"
 	"github.com/dlvhdr/gh-dash/v4/internal/tui/theme"
 )
+
+func TestMain(m *testing.M) {
+	zone.NewGlobal()
+	zone.SetEnabled(false)
+	os.Exit(m.Run())
+}
 
 // func TestFullOutput(t *testing.T) {
 // 	setupTest(t)
@@ -1273,9 +1280,6 @@ func TestView_ClosingSidebarFromBottomMode_NoExtraLine(t *testing.T) {
 	// must not produce an extra line from JoinVertical with an empty string.
 	// The rendered View should have the same line count regardless of whether
 	// we close from right mode or bottom mode.
-	zone.NewGlobal()
-	zone.SetEnabled(false)
-
 	cfg, err := config.ParseConfig(config.Location{
 		ConfigFlag:       "../config/testdata/test-config.yml",
 		SkipGlobalConfig: true,

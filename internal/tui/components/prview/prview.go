@@ -9,6 +9,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	zone "github.com/lrstanley/bubblezone/v2"
 
 	"github.com/dlvhdr/gh-dash/v4/internal/data"
 	"github.com/dlvhdr/gh-dash/v4/internal/tui/common"
@@ -44,9 +45,28 @@ type Model struct {
 
 var tabs = []string{" Overview", " Activity", " Commits", " Checks", " Files Changed"}
 
+// TabZoneID returns the bubblezone marker name used for the prview tab at index i.
+func TabZoneID(i int) string {
+	return fmt.Sprintf("prview-tab-%d", i)
+}
+
+// NumTabs is the number of inline tabs in the PR view.
+func NumTabs() int {
+	return len(tabs)
+}
+
+// SetTabIndex selects the inline tab at index i.
+func (m *Model) SetTabIndex(i int) {
+	m.carousel.SetCursor(i)
+}
+
 func NewModel(ctx *context.ProgramContext) Model {
+	markedTabs := make([]string, len(tabs))
+	for i, t := range tabs {
+		markedTabs[i] = zone.Mark(TabZoneID(i), t)
+	}
 	c := carousel.New(
-		carousel.WithItems(tabs),
+		carousel.WithItems(markedTabs),
 		carousel.WithWidth(ctx.MainContentWidth),
 	)
 
@@ -133,18 +153,18 @@ func (m Model) View() string {
 	}
 
 	body := strings.Builder{}
-	switch m.carousel.SelectedItem() {
-	case tabs[0]:
+	switch m.carousel.Cursor() {
+	case 0:
 		body.WriteString(m.viewOverviewTab())
-	case tabs[1]:
+	case 1:
 		body.WriteString(m.renderActivity())
-	case tabs[2]:
+	case 2:
 		body.WriteString(m.renderCommits())
-	case tabs[3]:
+	case 3:
 		body.WriteString(m.renderChecksOverview())
 		body.WriteString("\n\n")
 		body.WriteString(m.renderChecks())
-	case tabs[4]:
+	case 4:
 		body.WriteString(m.renderChangedFiles())
 	}
 

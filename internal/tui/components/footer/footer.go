@@ -20,6 +20,12 @@ import (
 
 const viewSeparator = " │ "
 
+// ViewZoneID returns the bubblezone marker name for the footer view-switcher
+// button corresponding to the given view.
+func ViewZoneID(view config.ViewType) string {
+	return fmt.Sprintf("view-%s", view)
+}
+
 type Model struct {
 	ctx             *context.ProgramContext
 	leftSection     *string
@@ -137,6 +143,7 @@ func (m *Model) renderViewButton(view config.ViewType) string {
 		label = " Issues"
 	}
 
+	var rendered string
 	if isActive {
 		// Active: colored icon + prominent background
 		// Use gold for notifications bell, green for others
@@ -152,13 +159,14 @@ func (m *Model) renderViewButton(view config.ViewType) string {
 			Background(m.ctx.Styles.ViewSwitcher.ActiveView.GetBackground()).
 			Bold(true)
 		if label != "" {
-			return activeStyle.Render(icon) + activeStyle.Render(label)
+			rendered = activeStyle.Render(icon) + activeStyle.Render(label)
+		} else {
+			rendered = activeStyle.Render(icon)
 		}
-		return activeStyle.Render(icon)
+	} else {
+		rendered = m.ctx.Styles.ViewSwitcher.InactiveView.Render(icon + label)
 	}
-
-	// Inactive: faint styling
-	return m.ctx.Styles.ViewSwitcher.InactiveView.Render(icon + label)
+	return zone.Mark(ViewZoneID(view), rendered)
 }
 
 func (m *Model) renderViewSwitcher(ctx *context.ProgramContext) string {

@@ -9,12 +9,18 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
+	zone "github.com/lrstanley/bubblezone/v2"
 
 	"github.com/dlvhdr/gh-dash/v4/internal/tui/common"
 	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/listviewport"
 	"github.com/dlvhdr/gh-dash/v4/internal/tui/constants"
 	"github.com/dlvhdr/gh-dash/v4/internal/tui/context"
 )
+
+// RowZoneID returns the bubblezone marker name used for the row at index i.
+func RowZoneID(i int) string {
+	return fmt.Sprintf("row-%d", i)
+}
 
 type Model struct {
 	ctx            context.ProgramContext
@@ -200,6 +206,19 @@ func (m *Model) OnLineUp() {
 	m.rowsViewport.PrevItem()
 }
 
+func (m *Model) ScrollUp(rows int) {
+	m.rowsViewport.ScrollUp(rows)
+}
+
+func (m *Model) ScrollDown(rows int) {
+	m.rowsViewport.ScrollDown(rows)
+}
+
+func (m *Model) SetCurrRow(id int) {
+	m.rowsViewport.SetCurrItem(id)
+	m.SyncViewPortContent()
+}
+
 func (m *Model) getShownColumns() []Column {
 	shownColumns := make([]Column, 0, len(m.Columns))
 	for _, col := range m.Columns {
@@ -369,10 +388,11 @@ func (m *Model) renderRow(rowId int, headerColumns []string) string {
 		headerColId++
 	}
 
-	return m.ctx.Styles.Table.RowStyle.
+	rendered := m.ctx.Styles.Table.RowStyle.
 		BorderBottom(m.ctx.Config.Theme.Ui.Table.ShowSeparator).
 		MaxWidth(m.dimensions.Width).
 		Render(lipgloss.JoinHorizontal(lipgloss.Top, renderedColumns...))
+	return zone.Mark(RowZoneID(rowId), rendered)
 }
 
 func (m *Model) UpdateProgramContext(ctx *context.ProgramContext) {

@@ -170,6 +170,9 @@ type Table interface {
 	PrevRow() int
 	FirstItem() int
 	LastItem() int
+	ScrollUp(rows int)
+	ScrollDown(rows int)
+	SetCurrRow(id int)
 	FetchNextPageSectionRows() []tea.Cmd
 	BuildRows() []table.Row
 	ResetRows()
@@ -333,6 +336,18 @@ func (m *BaseModel) FirstItem() int {
 
 func (m *BaseModel) LastItem() int {
 	return m.Table.LastItem()
+}
+
+func (m *BaseModel) ScrollUp(rows int) {
+	m.Table.ScrollUp(rows)
+}
+
+func (m *BaseModel) ScrollDown(rows int) {
+	m.Table.ScrollDown(rows)
+}
+
+func (m *BaseModel) SetCurrRow(id int) {
+	m.Table.SetCurrRow(id)
 }
 
 func (m *BaseModel) IsSearchFocused() bool {

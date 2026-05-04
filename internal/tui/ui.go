@@ -40,6 +40,7 @@ import (
 	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/reposection"
 	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/section"
 	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/sidebar"
+	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/table"
 	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/tabs"
 	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/tasks"
 	"github.com/dlvhdr/gh-dash/v4/internal/tui/constants"
@@ -67,7 +68,11 @@ type Model struct {
 	taskSpinner      spinner.Model
 	tasks            map[string]context.Task
 	positionOverride string // "" means no override, "right" or "bottom"
+	lastRowClickAt   time.Time
+	lastRowClickIdx  int
 }
+
+const doubleClickThreshold = 500 * time.Millisecond
 
 type Repositories struct {
 	GHRepo  *repository.Repository
@@ -830,6 +835,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, currSection.FetchNextPageSectionRows()...)
 		}
 
+	case tea.MouseWheelMsg:
+		if m.sidebar.IsOpen && zone.Get("sidebar").InBounds(msg) {
+			switch msg.Button {
+			case tea.MouseWheelUp:
+				m.sidebar.ScrollUp(2)
+			case tea.MouseWheelDown:
+				m.sidebar.ScrollDown(2)
+			}
+		} else if currSection != nil {
+			switch msg.Button {
+			case tea.MouseWheelUp:
+				currSection.ScrollUp(2)
+			case tea.MouseWheelDown:
+				currSection.ScrollDown(2)
+			}
+		}
+
 	case tea.MouseClickMsg:
 		if msg.Button != tea.MouseLeft {
 			return m, nil
@@ -849,6 +871,57 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return nil
 			}
 			cmds = append(cmds, openCmd)
+			break
+		}
+
+		if m.ctx.View != config.RepoView {
+			sections := m.getCurrentViewSections()
+			for i, s := range sections {
+				if zone.Get(tabs.TabZoneID(i)).InBounds(msg) {
+					m.setCurrSectionId(s.GetId())
+					cmd = m.onViewedRowChanged()
+					break
+				}
+			}
+		}
+
+		if currSection != nil {
+			for i := 0; i < currSection.NumRows(); i++ {
+				if zone.Get(table.RowZoneID(i)).InBounds(msg) {
+					now := time.Now()
+					isDoubleClick := i == m.lastRowClickIdx &&
+						now.Sub(m.lastRowClickAt) < doubleClickThreshold
+					if currSection.CurrRow() != i {
+						currSection.SetCurrRow(i)
+						cmd = m.onViewedRowChanged()
+					}
+					if isDoubleClick {
+						cmds = append(cmds, m.openBrowser())
+						m.lastRowClickIdx = -1 // consume; prevent triple-click reopen
+					} else {
+						m.lastRowClickIdx = i
+						m.lastRowClickAt = now
+					}
+					break
+				}
+			}
+		}
+
+		if m.sidebar.IsOpen {
+			for i := 0; i < prview.NumTabs(); i++ {
+				if zone.Get(prview.TabZoneID(i)).InBounds(msg) {
+					m.prView.SetTabIndex(i)
+					m.sidebar.SetContent(m.prView.View())
+					break
+				}
+			}
+		}
+
+		for _, view := range []config.ViewType{config.NotificationsView, config.PRsView, config.IssuesView} {
+			if zone.Get(footer.ViewZoneID(view)).InBounds(msg) {
+				cmds = append(cmds, m.setSelectedView(view))
+				break
+			}
 		}
 
 	case tea.WindowSizeMsg:
@@ -943,17 +1016,21 @@ func (m Model) View() tea.View {
 	content := "No sections defined"
 	currSection := m.getCurrSection()
 	if currSection != nil {
+		sidebarView := ""
+		if m.sidebar.IsOpen {
+			sidebarView = zone.Mark("sidebar", m.sidebar.View())
+		}
 		if m.ctx.PreviewPosition == "bottom" && m.sidebar.IsOpen {
 			content = lipgloss.JoinVertical(
 				lipgloss.Left,
 				m.getCurrSection().View(),
-				m.sidebar.View(),
+				sidebarView,
 			)
 		} else {
 			content = lipgloss.JoinHorizontal(
 				lipgloss.Top,
 				m.getCurrSection().View(),
-				m.sidebar.View(),
+				sidebarView,
 			)
 		}
 	}
@@ -1629,35 +1706,45 @@ func (m *Model) setCurrentViewSections(newSections []section.Section) {
 func (m *Model) switchSelectedView() tea.Cmd {
 	repoFF := config.IsFeatureEnabled(config.FF_REPO_VIEW)
 
+	// View cycle: Notifications → PRs → Issues (→ Repo if enabled) → Notifications
+	var next config.ViewType
+	if repoFF {
+		switch m.ctx.View {
+		case config.NotificationsView:
+			next = config.PRsView
+		case config.PRsView:
+			next = config.IssuesView
+		case config.IssuesView:
+			next = config.RepoView
+		case config.RepoView:
+			next = config.NotificationsView
+		}
+	} else {
+		switch m.ctx.View {
+		case config.NotificationsView:
+			next = config.PRsView
+		case config.PRsView:
+			next = config.IssuesView
+		default:
+			next = config.NotificationsView
+		}
+	}
+
+	return m.setSelectedView(next)
+}
+
+func (m *Model) setSelectedView(target config.ViewType) tea.Cmd {
+	if m.ctx.View == target {
+		return nil
+	}
+
 	// Reset notification subject when leaving notifications view
 	if m.ctx.View == config.NotificationsView {
 		keys.SetNotificationSubject(keys.NotificationSubjectNone)
 		m.notificationView.ClearSubject()
 	}
 
-	// View cycle: Notifications → PRs → Issues (→ Repo if enabled) → Notifications
-	if repoFF {
-		switch m.ctx.View {
-		case config.NotificationsView:
-			m.ctx.View = config.PRsView
-		case config.PRsView:
-			m.ctx.View = config.IssuesView
-		case config.IssuesView:
-			m.ctx.View = config.RepoView
-		case config.RepoView:
-			m.ctx.View = config.NotificationsView
-		}
-	} else {
-		switch m.ctx.View {
-		case config.NotificationsView:
-			m.ctx.View = config.PRsView
-		case config.PRsView:
-			m.ctx.View = config.IssuesView
-		default:
-			m.ctx.View = config.NotificationsView
-		}
-	}
-
+	m.ctx.View = target
 	m.syncMainContentDimensions()
 	m.setCurrSectionId(m.getCurrentViewDefaultSection())
 

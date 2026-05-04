@@ -6,6 +6,7 @@ import (
 	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	zone "github.com/lrstanley/bubblezone/v2"
 
 	"github.com/dlvhdr/gh-dash/v4/internal/data"
 	"github.com/dlvhdr/gh-dash/v4/internal/tui/common"
@@ -15,6 +16,11 @@ import (
 	"github.com/dlvhdr/gh-dash/v4/internal/tui/context"
 	"github.com/dlvhdr/gh-dash/v4/internal/utils"
 )
+
+// TabZoneID returns the bubblezone marker name used for the tab at index i.
+func TabZoneID(i int) string {
+	return fmt.Sprintf("tab-%d", i)
+}
 
 type SectionTab struct {
 	section section.Section
@@ -142,7 +148,7 @@ func (m *Model) UpdateTabTitles() {
 				utils.ShortNumber(tab.section.GetTotalCount()))
 		}
 
-		titles = append(titles, title)
+		titles = append(titles, zone.Mark(TabZoneID(i), title))
 	}
 
 	oldCursor := m.carousel.Cursor()
