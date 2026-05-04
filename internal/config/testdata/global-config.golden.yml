@@ -45,6 +45,8 @@ defaults:
     width: 60
     height: 0.6
     position: auto
+  prsView:
+    foldBodyHeight: 8
   prsLimit: 5
   prApproveComment: LGTM
   issuesLimit: 5

@@ -17,6 +17,8 @@ defaults:
     width: 0.45
     height: 0.60
     position: auto
+  prsView:
+    foldBodyHeight: 8
   prsLimit: 20
   refetchIntervalMinutes: 30
   view: prs
@@ -186,6 +188,24 @@ Specifies where the preview pane appears relative to the main content.
 You can toggle the position at runtime with the <kbd>P</kbd> key.
 
 By default, the position is `auto`.
+
+### PR View (`prsView`)
+
+These settings control behavior specific to the PR detail/preview view.
+
+#### Summary Fold Height (`foldBodyHeight`)
+
+| Type    | Minimum | Default |
+| :------ | :-----: | :-----: |
+| Integer |    0    |    8    |
+
+Specifies the maximum number of lines of the PR description (the "Summary" panel) to display
+before folding the rest behind a "Press e to read more..." prompt. Press <kbd>e</kbd> to
+toggle the full description.
+
+Set to `0` to disable folding entirely and always render the full description.
+
+By default, descriptions taller than 8 lines are folded.
 
 ### Refetch Interval in Minutes (`refetchIntervalMinutes`)
 

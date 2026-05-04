@@ -114,6 +114,10 @@ type PreviewConfig struct {
 	Position string  `yaml:"position,omitempty"`
 }
 
+type PrsViewConfig struct {
+	FoldBodyHeight int `yaml:"foldBodyHeight,omitempty" validate:"gte=0"`
+}
+
 type NullableBool struct {
 	Value *bool
 }
@@ -185,6 +189,7 @@ type LayoutConfig struct {
 
 type Defaults struct {
 	Preview                PreviewConfig `yaml:"preview"`
+	PrsView                PrsViewConfig `yaml:"prsView,omitempty"`
 	PrsLimit               int           `yaml:"prsLimit"`
 	PrApproveComment       string        `yaml:"prApproveComment,omitempty"`
 	IssuesLimit            int           `yaml:"issuesLimit"`
@@ -351,6 +356,9 @@ func (parser ConfigParser) getDefaultConfig() Config {
 				Width:    0.45,
 				Height:   0.60,
 				Position: "auto",
+			},
+			PrsView: PrsViewConfig{
+				FoldBodyHeight: 8,
 			},
 			PrsLimit:               20,
 			PrApproveComment:       "LGTM",

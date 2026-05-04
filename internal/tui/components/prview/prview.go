@@ -30,7 +30,6 @@ import (
 var (
 	htmlCommentRegex = regexp.MustCompile("(?U)<!--(.|[[:space:]])*-->")
 	lineCleanupRegex = regexp.MustCompile(`((\n)+|^)([^\r\n]*\|[^\r\n]*(\n)?)+`)
-	foldBodyHeight   = 8
 )
 
 type Model struct {
@@ -541,8 +540,9 @@ func (m *Model) renderSummary() string {
 		return ""
 	}
 
+	foldBodyHeight := m.ctx.Config.Defaults.PrsView.FoldBodyHeight
 	bodyHeight := lipgloss.Height(rendered)
-	if !m.summaryViewMore && bodyHeight > foldBodyHeight {
+	if foldBodyHeight > 0 && !m.summaryViewMore && bodyHeight > foldBodyHeight {
 		rendered = lipgloss.NewStyle().MaxHeight(foldBodyHeight).Render(rendered)
 		rendered = lipgloss.JoinVertical(lipgloss.Left,
 			rendered,

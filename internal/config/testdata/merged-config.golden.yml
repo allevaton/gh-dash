@@ -36,6 +36,8 @@ defaults:
     width: 80
     height: 0.6
     position: auto
+  prsView:
+    foldBodyHeight: 8
   prsLimit: 100
   issuesLimit: 100
   notificationsLimit: 100
